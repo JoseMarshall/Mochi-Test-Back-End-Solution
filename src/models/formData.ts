@@ -1,8 +1,8 @@
-interface FormData{
-    firstName: string,
-    lastName: string,
-    email: string,
-    username: string,
-    password:string
+interface FormData {
+	firstName: string;
+	lastName: string;
+	email: string;
+	username: string;
+	password: string;
 }
-export default FormData
+export default FormData;

@@ -1,5 +1,5 @@
-interface PdfAttach{
-    username: string,
-    pdf: string
+interface PdfAttach {
+	username: string;
+	pdf: string;
 }
-export default PdfAttach
+export default PdfAttach;
