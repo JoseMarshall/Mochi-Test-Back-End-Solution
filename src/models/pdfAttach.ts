@@ -1,5 +1,5 @@
 interface PdfAttach{
-    userId: string,
+    username: string,
     pdf: string
 }
 export default PdfAttach
