@@ -10,6 +10,8 @@ provider:
   tracing:
     lambda: true
     apiGateway: true
+  environment:
+    REGION: ${self:provider.region}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -53,17 +55,21 @@ provider:
 functions: 
   createUser:
     handler: built/functions/user/index.createUser
+    events: 
+      - http:
+          path: createUser
+          method: POST
   uploadPdf:
-    handler: built/functions/pdf/index.upload
+    handler: built/functions/pdf/index.uploadPdf
+    events: 
+      - http:
+          path: uploadPdf
+          method: POST
     environment:
-      bucket: mochi-pdfs
+      BUCKET_NAME: mochi-pdfs
   sendEmail:
-    handler: built/functions/user/index.sendEmail
-    environment:
-      bucket: mochi-pdfs
-    events:
-      - s3:
-          bucket: mochi-pdfs
-          event: s3:ObjectCreated:*
-          rules:
-            - suffix: .pdf
+    handler: built/functions/email/index.reSendEamil
+    events: 
+      - http:
+          path: sendEmail
+          method: POST
