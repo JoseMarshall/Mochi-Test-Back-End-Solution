@@ -5,6 +5,6 @@ const AWS_CONFIG = {
   region: process.env.AWS_REGION || 'us-east-1',
 }
 const dynamodb: DocumentClient = new DynamoDB.DocumentClient(AWS_CONFIG)
-const bucket = new S3(AWS_CONFIG)
+const s3 = new S3(AWS_CONFIG)
 
-export {dynamodb, bucket}
+export {dynamodb, s3}
