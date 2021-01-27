@@ -1,3 +1,4 @@
+//@ts-noCheck
 import { createTransport } from 'nodemailer';
 import { compile } from 'handlebars';
 import { readFileSync } from 'fs';
@@ -8,14 +9,14 @@ import { APIGatewayProxyEvent, Callback, Context } from 'aws-lambda'
 
 const OAuth2 = google.auth.OAuth2;
 
-const clientId = process.env.CLIENT_ID
-const clientSecret = process.env.CLIENT_SECRET
-const refreshToken = process.env.REFRESH_TOKEN
+const clientId = process.env.CLIENT_ID || '1010002138431-tn5ag045ijnsau0pbpc9g5uh83krsmi7.apps.googleusercontent.com'
+const clientSecret = process.env.CLIENT_SECRET || '_8vXs2cGX8CWUZ06zsA6yHgQ'
+const refreshToken = process.env.REFRESH_TOKEN || '1//040EPxtx8hRXQCgYIARAAGAQSNwF-L9IrvEkhdmz1DqEuUeY_V-GLnvlHAFu-Kh_tKdAljTcPsP8ojoFTGyFboQR6JRwDtYjxpKw'
 
 const myOAuth2Client = new OAuth2(
     clientId,
     clientSecret,
-    process.env.REDIRECT_URI
+    process.env.REDIRECT_URI||'https://developers.google.com/oauthplayground'
 )
 
 myOAuth2Client.setCredentials({
@@ -24,16 +25,16 @@ myOAuth2Client.setCredentials({
 const accessToken = myOAuth2Client.getAccessToken()
 
 const transporter = createTransport({
-    service: process.env.EMAIL_SERVICE,
-    auth: {
-        user: process.env.EMAIL_ADDRESS, 
-        type: 'OAuth2',
-        accessToken,
-        clientId,
-        clientSecret,
-        refreshToken
-
-    }
+  service: process.env.EMAIL_SERVICE || 'gmail', 
+  auth: {
+      user: process.env.EMAIL_ADDRESS || 'allpharma.enterprise@gmail.com', 
+      type: 'OAuth2',
+      accessToken,
+      clientId,
+      clientSecret,
+      refreshToken
+  }
+    
 })
 
 const mailOptions = {
@@ -75,7 +76,7 @@ const send = (destiny: string, hypertext: string) => {
 };
 
 function sendWelcomeEmail(user: CreatedUser) {
-    const HTML = loadTemplate('welcome.hbs', user); //The html to be send in the body of email
+    const HTML = loadTemplate('../../../assets/welcome.hbs', user); //The html to be send in the body of email
     return  send(user.email, HTML)
 }
 
@@ -104,7 +105,7 @@ const reSendEamil = async (event: APIGatewayProxyEvent, context: Context, callba
     const params = {
       TableName: 'users',
       Key: {
-        'userId': requestBody.userId
+        'userId': requestBody.username
       },
       ProjectionExpression: `userId,
                             firstName,
@@ -112,12 +113,12 @@ const reSendEamil = async (event: APIGatewayProxyEvent, context: Context, callba
                             email,
                             linkToPdf,
                             username,
-                            createdAt,`
+                            createdAt`
     };
-    dynamodb.get(params)
+    await dynamodb.get(params)
     .promise()
-    .then((data) => {
-      sendWelcomeEmail(data.Item as CreatedUser)
+    .then(async(data) => {
+      await sendWelcomeEmail(data.Item as CreatedUser)
           .then((res)=>callback(null, successfullySent(res)))
           .catch((error) =>callback(error, failedSending(error)))
     })
