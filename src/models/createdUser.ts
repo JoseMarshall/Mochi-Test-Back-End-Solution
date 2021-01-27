@@ -3,9 +3,10 @@ interface CreatedUser{
     firstName: string,
     lastName: string,
     email: string,
-    username: string,
-    password:string,
-    createdAt: string,
-    updatedAt: string,
+    linkToPdf?: string,
+    username?: string,
+    password?:string,
+    createdAt?: string,
+    updatedAt?: string,
 }
 export default CreatedUser
