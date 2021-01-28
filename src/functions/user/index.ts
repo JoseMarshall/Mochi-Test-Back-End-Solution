@@ -133,10 +133,13 @@ const validateFormData = (data: FormData) => {
 			typeof lastName !== "string" ||
 			!isValideEmail(email)
 		) {
+			
 			reject(
-				new Error(
+				{error: new Error(
 					`Verifique se o campo 'firstName' e 'lastName' sao do tipo 'string' e se o email é válido`
-				)
+				),
+					code: 400
+			}
 			);
 			return;
 		} else {
@@ -161,6 +164,10 @@ const createUser = (
 	callback: Callback
 ) => {
 	const requestBody = JSON.parse(event.body) as FormData;
+
+	/**
+	 * Function called when the user has been successfully created
+	 */
 	const successfullyCreated = (res: CreatedUser) => {
 		callback(null, {
 			statusCode: 201,
@@ -171,12 +178,20 @@ const createUser = (
 		});
 	};
 
-	const failedCreating = (err: Error) => {
+	/**
+	 * Function called when occurs any exception creating the user
+	 */
+	interface ErrorCreateUser{
+		error: Error;
+		code: number;
+	}
+	const failedCreating = (err:ErrorCreateUser) => {
+		const {code, error} = err
 		callback(null, {
-			statusCode: 500,
+			statusCode: code || 500,
 			body: JSON.stringify({
 				message: `Unable to submit user`,
-				error: err.message,
+				error: error.message,
 			}),
 		});
 	};
@@ -198,4 +213,4 @@ const createUser = (
 		.catch(failedCreating);
 };
 
-export { createUser };
+export { createUser, existUsername };

@@ -1,4 +1,3 @@
-//@ts-noCheck
 import { sendWelcomeEmail } from "../email";
 import { dynamodb } from "../../aws";
 import { APIGatewayProxyEvent, Callback, Context } from "aws-lambda";
@@ -6,14 +5,15 @@ import { PdfAttach, CreatedUser } from "../../models";
 import { v4 as uuid } from "uuid";
 import { s3 } from "../../aws";
 import * as fileType from "file-type";
+import {existUsername} from '../user'
 
 const successfullySent = (response) => {
 	return {
 		statusCode: 200,
 		body: JSON.stringify({
 			message:
-				"Email enviado com sucesso, por favor checa a sua caixa de entrada",
-			response,
+				"Ficheiro pdf carregado e email enviado com sucesso, por favor checa a sua caixa de entrada",
+			linkToPdf: response.linkToPdf,
 		}),
 	};
 };
@@ -28,7 +28,7 @@ const failedSending = (response) => {
 	};
 };
 
-const getURL = async (file: File) => {
+const getURL = async (file: Buffer) => {
 	const pdfId = `${uuid()}.pdf`;
 	const s3Params = {
 		Bucket: process.env.BUCKET_NAME,
@@ -50,7 +50,7 @@ const getURL = async (file: File) => {
 	});
 };
 
-const sendEmail = async (user, callback: Callback) => {
+const sendEmail = async (user: PdfAttach, callback: Callback) => {
 	const params = {
 		TableName: "users",
 		Key: {
@@ -63,7 +63,6 @@ const sendEmail = async (user, callback: Callback) => {
                           username,
                           createdAt`,
 	};
-	console.log("sendEmail calll");
 	return dynamodb
 		.get(params)
 		.promise()
@@ -86,11 +85,11 @@ const sendEmail = async (user, callback: Callback) => {
 						...data.Item,
 						linkToPdf: user.linkToPdf,
 					} as CreatedUser)
-						.then((res) => callback(null, successfullySent(res)))
-						.catch((error) => callback(error, failedSending(error)));
+						.then((res) => callback(null, successfullySent({response: res, linkToPdf: user.linkToPdf})))
+						.catch((error) => callback(null, failedSending(error)));
 				});
 		})
-		.catch((error) => callback(error, failedSending(error)));
+		.catch((error) => callback(null, failedSending(error)));
 };
 
 const uploadPdf = async (
@@ -100,30 +99,41 @@ const uploadPdf = async (
 ) => {
 	const requestBody = JSON.parse(event.body);
 	const base64String = requestBody.pdf;
-	const buffer = new Buffer.from(base64String, "base64");
+	const buffer =  Buffer.from(base64String, "base64");
 	const fileMime = await fileType.fromBuffer(buffer);
 
 	if (!fileMime || fileMime.ext !== "pdf") {
-		return callback(new Error(""), {
-			statusCode: 500,
+		return callback(null, {
+			statusCode: 400,
 			body: JSON.stringify({
-				message: "Alguma coisa correu mal enquanto tentava enviar o email",
+				error: `Tipo de ficheiro não suportado, apenas suportado ficheiros: '.pdf' enviado ${fileMime.ext}`,
 			}),
 		});
 	}
 
-	await getURL(buffer) //Write image to bucket
-		.then(async (linkToPdf: string) => {
-			await sendEmail({ username: requestBody.username, linkToPdf }, callback);
-		})
-		.catch((err) =>
-			callback(err, {
-				statusCode: 500,
+	await existUsername(requestBody.username)
+	.then(async (exists) => {
+		if(exists){
+			await getURL(buffer) //Write image to bucket
+				.then(async (linkToPdf: string) => {
+					await sendEmail({ username: requestBody.username, linkToPdf }, callback);
+				})
+				.catch((err) =>
+					callback(null, failedSending({error: 'Failed uploading the file'}))
+				);
+		}
+		else{
+			callback(null,  {
+				statusCode: 403,
 				body: JSON.stringify({
-					message: "Alguma coisa correu mal enquanto tentava enviar o email",
+					error: 'Failed uploading the file',
 				}),
 			})
-		);
+		}
+	})
+	.catch((err) =>
+	callback(null, failedSending({error: 'Failed uploading the file'}))
+)
 };
 
 export { uploadPdf };
