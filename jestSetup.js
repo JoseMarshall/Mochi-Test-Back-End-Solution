@@ -1,0 +1,1 @@
+jest.setTimeout(2400000); // set the jest timeout in milliseconds
