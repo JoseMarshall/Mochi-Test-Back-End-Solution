@@ -1,5 +1,5 @@
 interface PdfAttach {
 	username: string;
-	pdf: string;
+	linkToPdf: string;
 }
 export default PdfAttach;
