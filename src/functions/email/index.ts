@@ -10,17 +10,15 @@ import { APIGatewayProxyEvent, Callback, Context } from "aws-lambda";
 const OAuth2 = google.auth.OAuth2;
 
 const clientId =
-	process.env.CLIENT_ID ||
-	"1010002138431-tn5ag045ijnsau0pbpc9g5uh83krsmi7.apps.googleusercontent.com";
-const clientSecret = process.env.CLIENT_SECRET || "_8vXs2cGX8CWUZ06zsA6yHgQ";
+	process.env.CLIENT_ID;
+const clientSecret = process.env.CLIENT_SECRET;
 const refreshToken =
-	process.env.REFRESH_TOKEN ||
-	"1//040EPxtx8hRXQCgYIARAAGAQSNwF-L9IrvEkhdmz1DqEuUeY_V-GLnvlHAFu-Kh_tKdAljTcPsP8ojoFTGyFboQR6JRwDtYjxpKw";
+	process.env.REFRESH_TOKEN;
 
 const myOAuth2Client = new OAuth2(
 	clientId,
 	clientSecret,
-	process.env.REDIRECT_URI || "https://developers.google.com/oauthplayground"
+	process.env.REDIRECT_URI
 );
 
 myOAuth2Client.setCredentials({
@@ -29,9 +27,9 @@ myOAuth2Client.setCredentials({
 const accessToken = myOAuth2Client.getAccessToken();
 
 const transporter = createTransport({
-	service: process.env.EMAIL_SERVICE || "gmail",
+	service: process.env.EMAIL_SERVICE,
 	auth: {
-		user: process.env.EMAIL_ADDRESS || "allpharma.enterprise@gmail.com",
+		user: process.env.EMAIL_ADDRESS,
 		type: "OAuth2",
 		accessToken,
 		clientId,
@@ -43,7 +41,7 @@ const transporter = createTransport({
 const mailOptions = {
 	from: process.env.EMAIL_ADDRESS,
 	to: "",
-	subject: "Bem vindo à Mochi Noir, Lda",
+	subject: process.env.EMAIL_SUBJECT,
 	html: "",
 };
 
@@ -91,9 +89,9 @@ const successfullySent = (response) => {
 	};
 };
 
-const failedSending = (response) => {
+const failedSending = (response : Error) => {
 	return {
-		statusCode: 500,
+		statusCode: 400,
 		body: JSON.stringify({
 			message: "Alguma coisa correu mal enquanto tentava enviar o email",
 			response,
@@ -124,11 +122,19 @@ const reSendEamil = async (
 		.get(params)
 		.promise()
 		.then(async (data) => {
-			await sendWelcomeEmail(data.Item as CreatedUser)
-				.then((res) => callback(null, successfullySent(res)))
-				.catch((error) => callback(error, failedSending(error)));
+			if (!data.Item.email) {
+				return callback(null, failedSending({error: 'Email não registrado, por favor cadastre-se novamente'}))
+			}
+			else if (!data.Item.linkToPdf){
+				return callback(null, failedSending({error: 'Link do pdf não registrado, por faça o upload de algum ficheiro .pdf'}))
+			}
+			else{
+				return await sendWelcomeEmail(data.Item as CreatedUser)
+					.then((res) => callback(null, successfullySent(res)))
+					.catch((error) => callback(null, failedSending(error)));
+			}
 		})
-		.catch((error) => callback(error, failedSending(error)));
+		.catch((error) => callback(null, failedSending(error)));
 };
 
 export { sendWelcomeEmail, reSendEamil };
