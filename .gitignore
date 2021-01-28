@@ -15,3 +15,4 @@ built
 bodyCreateUser.json
 bodySendEmail.json
 bodyUploadPdf.json
+serverless.yml
