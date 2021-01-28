@@ -5,7 +5,7 @@ import { PdfAttach, CreatedUser } from "../../models";
 import { v4 as uuid } from "uuid";
 import { s3 } from "../../aws";
 import * as fileType from "file-type";
-import {existUsername} from '../user'
+import { existUsername } from "../user";
 
 const successfullySent = (response) => {
 	return {
@@ -85,7 +85,12 @@ const sendEmail = async (user: PdfAttach, callback: Callback) => {
 						...data.Item,
 						linkToPdf: user.linkToPdf,
 					} as CreatedUser)
-						.then((res) => callback(null, successfullySent({response: res, linkToPdf: user.linkToPdf})))
+						.then((res) =>
+							callback(
+								null,
+								successfullySent({ response: res, linkToPdf: user.linkToPdf })
+							)
+						)
 						.catch((error) => callback(null, failedSending(error)));
 				});
 		})
@@ -99,7 +104,7 @@ const uploadPdf = async (
 ) => {
 	const requestBody = JSON.parse(event.body);
 	const base64String = requestBody.pdf;
-	const buffer =  Buffer.from(base64String, "base64");
+	const buffer = Buffer.from(base64String, "base64");
 	const fileMime = await fileType.fromBuffer(buffer);
 
 	if (!fileMime || fileMime.ext !== "pdf") {
@@ -112,28 +117,33 @@ const uploadPdf = async (
 	}
 
 	await existUsername(requestBody.username)
-	.then(async (exists) => {
-		if(exists){
-			await getURL(buffer) //Write image to bucket
-				.then(async (linkToPdf: string) => {
-					await sendEmail({ username: requestBody.username, linkToPdf }, callback);
-				})
-				.catch((err) =>
-					callback(null, failedSending({error: 'Failed uploading the file'}))
-				);
-		}
-		else{
-			callback(null,  {
-				statusCode: 403,
-				body: JSON.stringify({
-					error: 'Failed uploading the file',
-				}),
-			})
-		}
-	})
-	.catch((err) =>
-	callback(null, failedSending({error: 'Failed uploading the file'}))
-)
+		.then(async (exists) => {
+			if (exists) {
+				await getURL(buffer) //Write image to bucket
+					.then(async (linkToPdf: string) => {
+						await sendEmail(
+							{ username: requestBody.username, linkToPdf },
+							callback
+						);
+					})
+					.catch((err) =>
+						callback(
+							null,
+							failedSending({ error: "Failed uploading the file" })
+						)
+					);
+			} else {
+				callback(null, {
+					statusCode: 403,
+					body: JSON.stringify({
+						error: "Failed uploading the file",
+					}),
+				});
+			}
+		})
+		.catch((err) =>
+			callback(null, failedSending({ error: "Failed uploading the file" }))
+		);
 };
 
 export { uploadPdf };

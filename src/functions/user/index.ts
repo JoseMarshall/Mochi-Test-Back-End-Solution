@@ -133,14 +133,12 @@ const validateFormData = (data: FormData) => {
 			typeof lastName !== "string" ||
 			!isValideEmail(email)
 		) {
-			
-			reject(
-				{error: new Error(
+			reject({
+				error: new Error(
 					`Verifique se o campo 'firstName' e 'lastName' sao do tipo 'string' e se o email é válido`
 				),
-					code: 400
-			}
-			);
+				code: 400,
+			});
 			return;
 		} else {
 			await existUsername(username)
@@ -181,12 +179,12 @@ const createUser = (
 	/**
 	 * Function called when occurs any exception creating the user
 	 */
-	interface ErrorCreateUser{
+	interface ErrorCreateUser {
 		error: Error;
 		code: number;
 	}
-	const failedCreating = (err:ErrorCreateUser) => {
-		const {code, error} = err
+	const failedCreating = (err: ErrorCreateUser) => {
+		const { code, error } = err;
 		callback(null, {
 			statusCode: code || 500,
 			body: JSON.stringify({
